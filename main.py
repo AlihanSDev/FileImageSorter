@@ -1,21 +1,26 @@
+"""FileImageSorter: GUI tool for copying and sorting PNG files by size."""
+
 import os
 import shutil
 from tkinter import Tk, Button, Label, filedialog, messagebox, StringVar
 from PIL import Image
 
 def select_source_folder():
+    """Opens a dialog to select the source folder"""
     folder = filedialog.askdirectory(title="Select a folder to search for PNGs")
     if folder:
         source_folder.set(folder)
         status_label.config(text=f"Folder selected: {folder}")
 
 def select_destination_folder():
+    """Open dialog to select the destination folder where images will be copied"""
     folder = filedialog.askdirectory(title="Select a folder to save the PNG")
     if folder:
         destination_folder.set(folder)
         status_label.config(text=f"PNGs will be saved in: {folder}")
 
 def find_and_copy_png():
+    """Search for PNG files and copy them to the selected destination folder, avoiding overwrites"""
     source = source_folder.get()
     destination = destination_folder.get()
 
@@ -53,6 +58,7 @@ def find_and_copy_png():
         status_label.config(text="PNG files not found")
 
 def sort_by_size():
+    """Sort and copy PNG files into subfolders based on image dimensions."""
     source = source_folder.get()
     destination = destination_folder.get()
 
