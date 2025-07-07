@@ -1,5 +1,7 @@
 # 🖼️ FileImageSorter
 
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=15&pause=1000&color=38F79C&width=435&lines=%F0%9F%93%82+Select+a+folder+containing+PNG+images+;%F0%9F%96%B1%EF%B8%8F+Choose+where+to+save+the+results+;%F0%9F%A7%B9+Copy+or+sort+images+by+their+resolution)](https://git.io/typing-svg)
+
 A simple and user-friendly Python app for organizing your PNG images.
 
 This tool allows you to:
