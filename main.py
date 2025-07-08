@@ -1,6 +1,6 @@
 """FileImageSorter: GUI tool for copying and sorting PNG files by size."""
 
-import os
+from pathlib import Path
 import shutil
 from tkinter import Tk, Button, Label, filedialog, messagebox, StringVar
 from PIL import Image
@@ -38,78 +38,53 @@ def get_all_png_files(folder: Path):
 
 def find_and_copy_png():
     """Search for PNG files and copy them to the selected destination folder, avoiding overwrites"""
-    source = source_folder.get()
-    destination = destination_folder.get()
+    source = Path(source_folder.get())
+    destination = Path(destination_folder.get())
 
     if not source or not destination:
         messagebox.showerror("Error", "Please select both folders")
         return
 
-    os.makedirs(destination, exist_ok=True)
+    destination.mkdir(parents=True, exist_ok=True)
 
     file_count = {}
+    png_files = get_all_png_files(source)
 
-    png_files_found = 0
-    for root, _, files in os.walk(source):
-        for file in files:
-            if file.lower().endswith(".png"):
-                source_file_path = os.path.join(root, file)
-                base_name, ext = os.path.splitext(file)
+    for file in png_files:
+        copy_png_file(file, destination, file_count)
 
-                if base_name in file_count:
-                    file_count[base_name] += 1
-                    new_file_name = f"{base_name}_{file_count[base_name]}{ext}"
-                else:
-                    file_count[base_name] = 0
-                    new_file_name = file
-
-                destination_file_path = os.path.join(destination, new_file_name)
-
-                # Копируем файл
-                shutil.copy2(source_file_path, destination_file_path)
-                png_files_found += 1
-
-    if png_files_found > 0:
-        status_label.config(text=f"Found and copied {png_files_found} PNG files")
+    if png_files:
+        status_label.config(text=f"Found and copied {len(png_files)} PNG files")
     else:
         status_label.config(text="PNG files not found")
 
 def sort_by_size():
     """Sort and copy PNG files into subfolders based on image dimensions."""
-    source = source_folder.get()
-    destination = destination_folder.get()
+    source = Path(source_folder.get())
+    destination = Path(destination_folder.get())
 
     if not source or not destination:
         messagebox.showerror("Error", "Please select both folders")
         return
 
-    os.makedirs(destination, exist_ok=True)
+    destination.mkdir(parents=True, exist_ok=True)
 
-    size_folders = {}
+    png_files = get_all_png_files(source)
+    sorted_count = 0
 
-    png_files_found = 0
-    for root, _, files in os.walk(source):
-        for file in files:
-            if file.lower().endswith(".png"):
-                source_file_path = os.path.join(root, file)
-                try:
-                    with Image.open(source_file_path) as img:
-                        width, height = img.size
-                        size_key = f"{width}x{height}"
+    for file in png_files:
+        try:
+            with Image.open(file) as img:
+                size_folder = f"{img.width}x{img.height}"
+                target_dir = destination / size_folder
+                target_dir.mkdir(exist_ok=True)
+                shutil.copy2(file, target_dir / file.name)
+                sorted_count += 1
+        except Exception as e:
+            messagebox.showwarning("Error", f"Failed to process file {file.name}: {e}")
 
-                        if size_key not in size_folders:
-                            size_folder_path = os.path.join(destination, size_key)
-                            os.makedirs(size_folder_path, exist_ok=True)
-                            size_folders[size_key] = size_folder_path
-
-                        destination_file_path = os.path.join(size_folders[size_key], file)
-                        shutil.copy2(source_file_path, destination_file_path)
-                        png_files_found += 1
-                except Exception as e:
-                    messagebox.showwarning("Error", f"Failed to process file {file}: {e}")
-
-    if png_files_found > 0:
-        status_label.config(text=f"Found and sorted {png_files_found} PNG files")
+    if sorted_count:
+        status_label.config(text=f"Found and sorted {sorted_count} PNG files")
     else:
         status_label.config(text="PNG files not found")
 
@@ -133,3 +108,4 @@ status_label = Label(root, text="Waiting for action...", fg="blue")
 status_label.pack(pady=10)
 
 root.mainloop()
+
