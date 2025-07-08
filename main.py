@@ -19,6 +19,23 @@ def select_destination_folder():
         destination_folder.set(folder)
         status_label.config(text=f"PNGs will be saved in: {folder}")
 
+def copy_png_file(src: Path, dst_dir: Path, file_count: dict):
+    """Copies a PNG file to the destination folder, adding a number if the filename already exists."""
+    base_name = src.stem
+    ext = src.suffix
+    if file_count.get(base_name, 0):
+        file_count[base_name] += 1
+        new_name = f"{base_name}_{file_count[base_name]}{ext}"
+    else:
+        file_count[base_name] = 0
+        new_name = src.name
+
+    dst_path = dst_dir / new_name
+    shutil.copy2(src, dst_path)
+
+def get_all_png_files(folder: Path):
+    return [p for p in folder.rglob("*.png") if p.is_file()]
+
 def find_and_copy_png():
     """Search for PNG files and copy them to the selected destination folder, avoiding overwrites"""
     source = source_folder.get()
