@@ -34,6 +34,7 @@ def copy_png_file(src: Path, dst_dir: Path, file_count: dict):
     shutil.copy2(src, dst_path)
 
 def get_all_png_files(folder: Path):
+    """Returns a list of all PNG files in the given folder and its subfolders."""
     return [p for p in folder.rglob("*.png") if p.is_file()]
 
 def find_and_copy_png():
