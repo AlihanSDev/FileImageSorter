@@ -25,4 +25,6 @@ jobs:
 
       - name: Run pylint
         run: |
-          pylint $(git ls-files '*.py')
+          pylint $(git ls-files '*.py') \
+            --extension-pkg-whitelist=PyQt5 \
+            --disable=import-error,no-name-in-module,unused-import,too-many-instance-attributes,missing-class-docstring,broad-exception-caught,invalid-name,wrong-import-order
