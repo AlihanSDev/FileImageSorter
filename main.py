@@ -1,112 +1,127 @@
-"""FileImageSorter: GUI tool for copying and sorting PNG files by size."""
+"""FileImageSorter: GUI tool for copying and sorting PNG files by size, using PyQt5"""
 
 from pathlib import Path
 import shutil
-from tkinter import Tk, Button, Label, filedialog, messagebox, StringVar
 from PIL import Image
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QLabel, QPushButton, QFileDialog, QVBoxLayout, QMessageBox
+)
+import sys
 
-def select_source_folder():
-    """Opens a dialog to select the source folder"""
-    folder = filedialog.askdirectory(title="Select a folder to search for PNGs")
-    if folder:
-        source_folder.set(folder)
-        status_label.config(text=f"Folder selected: {folder}")
+class FileImageSorter(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("FileImageSorter")
+        self.source_folder = None
+        self.destination_folder = None
 
-def select_destination_folder():
-    """Open dialog to select the destination folder where images will be copied"""
-    folder = filedialog.askdirectory(title="Select a folder to save the PNG")
-    if folder:
-        destination_folder.set(folder)
-        status_label.config(text=f"PNGs will be saved in: {folder}")
+        self.layout = QVBoxLayout()
 
-def copy_png_file(src: Path, dst_dir: Path, file_count: dict):
-    """Copies a PNG file to the destination folder, adding a number if the filename already exists."""
-    base_name = src.stem
-    ext = src.suffix
-    if file_count.get(base_name, 0):
-        file_count[base_name] += 1
-        new_name = f"{base_name}_{file_count[base_name]}{ext}"
-    else:
-        file_count[base_name] = 0
-        new_name = src.name
+        self.label1 = QLabel("Select a folder to search for PNGs:")
+        self.layout.addWidget(self.label1)
 
-    dst_path = dst_dir / new_name
-    shutil.copy2(src, dst_path)
+        self.select_source_btn = QPushButton("Select a folder")
+        self.select_source_btn.clicked.connect(self.select_source_folder)
+        self.layout.addWidget(self.select_source_btn)
 
-def get_all_png_files(folder: Path):
-    """Returns a list of all PNG files in the given folder and its subfolders."""
-    return [p for p in folder.rglob("*.png") if p.is_file()]
+        self.label2 = QLabel("Select a folder to save the PNG:")
+        self.layout.addWidget(self.label2)
 
-def find_and_copy_png():
-    """Search for PNG files and copy them to the selected destination folder, avoiding overwrites"""
-    source = Path(source_folder.get())
-    destination = Path(destination_folder.get())
+        self.select_destination_btn = QPushButton("Select a folder")
+        self.select_destination_btn.clicked.connect(self.select_destination_folder)
+        self.layout.addWidget(self.select_destination_btn)
 
-    if not source or not destination:
-        messagebox.showerror("Error", "Please select both folders")
-        return
+        self.copy_btn = QPushButton("Find and copy PNG")
+        self.copy_btn.clicked.connect(self.find_and_copy_png)
+        self.layout.addWidget(self.copy_btn)
 
-    destination.mkdir(parents=True, exist_ok=True)
+        self.sort_btn = QPushButton("Sort PNGs by size")
+        self.sort_btn.clicked.connect(self.sort_by_size)
+        self.layout.addWidget(self.sort_btn)
 
-    file_count = {}
-    png_files = get_all_png_files(source)
+        self.status_label = QLabel("Waiting for action...")
+        self.layout.addWidget(self.status_label)
 
-    for file in png_files:
-        copy_png_file(file, destination, file_count)
+        self.setLayout(self.layout)
 
-    if png_files:
-        status_label.config(text=f"Found and copied {len(png_files)} PNG files")
-    else:
-        status_label.config(text="PNG files not found")
+    def select_source_folder(self):
+        """Opens a folder dialog to select the source directory"""
+        folder = QFileDialog.getExistingDirectory(self, "Select a folder to search for PNGs")
+        if folder:
+            self.source_folder = Path(folder)
+            self.status_label.setText(f"Folder selected: {folder}")
 
-def sort_by_size():
-    """Sort and copy PNG files into subfolders based on image dimensions."""
-    source = Path(source_folder.get())
-    destination = Path(destination_folder.get())
+    def select_destination_folder(self):
+        """Opens a folder dialog to select the destination directory"""
+        folder = QFileDialog.getExistingDirectory(self, "Select a folder to save the PNG")
+        if folder:
+            self.destination_folder = Path(folder)
+            self.status_label.setText(f"PNGs will be saved in: {folder}")
 
-    if not source or not destination:
-        messagebox.showerror("Error", "Please select both folders")
-        return
+    def get_all_png_files(self, folder: Path):
+        """Returns a list of all PNG files in the given folder and its subfolders"""
+        return [p for p in folder.rglob("*.png") if p.is_file()]
 
-    destination.mkdir(parents=True, exist_ok=True)
+    def copy_png_file(self, src: Path, dst_dir: Path, file_count: dict):
+        """Copies a PNG file to the destination folder, renames if file exists"""
+        base_name = src.stem
+        ext = src.suffix
+        if file_count.get(base_name, 0):
+            file_count[base_name] += 1
+            new_name = f"{base_name}_{file_count[base_name]}{ext}"
+        else:
+            file_count[base_name] = 0
+            new_name = src.name
 
-    png_files = get_all_png_files(source)
-    sorted_count = 0
+        dst_path = dst_dir / new_name
+        shutil.copy2(src, dst_path)
 
-    for file in png_files:
-        try:
-            with Image.open(file) as img:
-                size_folder = f"{img.width}x{img.height}"
-                target_dir = destination / size_folder
-                target_dir.mkdir(exist_ok=True)
-                shutil.copy2(file, target_dir / file.name)
-                sorted_count += 1
-        except Exception as e:
-            messagebox.showwarning("Error", f"Failed to process file {file.name}: {e}")
+    def find_and_copy_png(self):
+        """Finds PNG files and copies them to destination folder without overwriting"""
+        if not self.source_folder or not self.destination_folder:
+            QMessageBox.critical(self, "Error", "Please select both folders")
+            return
 
-    if sorted_count:
-        status_label.config(text=f"Found and sorted {sorted_count} PNG files")
-    else:
-        status_label.config(text="PNG files not found")
+        self.destination_folder.mkdir(parents=True, exist_ok=True)
+        file_count = {}
+        png_files = self.get_all_png_files(self.source_folder)
 
-root = Tk()
-root.title("FileImageSorter")
+        for file in png_files:
+            self.copy_png_file(file, self.destination_folder, file_count)
 
-source_folder = StringVar()
-destination_folder = StringVar()
+        if png_files:
+            self.status_label.setText(f"Found and copied {len(png_files)} PNG files")
+        else:
+            self.status_label.setText("PNG files not found")
 
-Label(root, text="Select a folder to search for PNGs:").pack(pady=5)
-Button(root, text="Select a folder", command=select_source_folder).pack(pady=5)
+    def sort_by_size(self):
+        """Sorts PNG files into subfolders based on image dimensions"""
+        if not self.source_folder or not self.destination_folder:
+            QMessageBox.critical(self, "Error", "Please select both folders")
+            return
 
-Label(root, text="Select a folder to save the PNG:").pack(pady=5)
-Button(root, text="Select a folder", command=select_destination_folder).pack(pady=5)
+        self.destination_folder.mkdir(parents=True, exist_ok=True)
+        png_files = self.get_all_png_files(self.source_folder)
+        sorted_count = 0
 
-Button(root, text="Find and copy PNG", command=find_and_copy_png).pack(pady=10)
+        for file in png_files:
+            try:
+                with Image.open(file) as img:
+                    size_folder = f"{img.width}x{img.height}"
+                    target_dir = self.destination_folder / size_folder
+                    target_dir.mkdir(exist_ok=True)
+                    shutil.copy2(file, target_dir / file.name)
+                    sorted_count += 1
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to process file {file.name}:\n{e}")
 
-Button(root, text="Sort PNGs by size", command=sort_by_size).pack(pady=10)
+        if sorted_count:
+            self.status_label.setText(f"Found and sorted {sorted_count} PNG files")
+        else:
+            self.status_label.setText("PNG files not found")
 
-status_label = Label(root, text="Waiting for action...", fg="blue")
-status_label.pack(pady=10)
-
-root.mainloop()
-
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = FileImageSorter()
+    window.show()
+    sys.exit(app.exec_())
