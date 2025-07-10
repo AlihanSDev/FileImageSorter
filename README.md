@@ -27,16 +27,17 @@ This tool allows you to:
 
 - Works recursively through subdirectories
 - Handles errors if image files are corrupted or unreadable
-- Clean and intuitive GUI built with `tkinter`
+- Clean and intuitive GUI built with `PyQt5`
 
 ---
 
 ## 📦 Requirements
 
 - Python 3.7+
+- [PyQt5](https://pypi.org/project/PyQt5/)
 - [Pillow (PIL)](https://pypi.org/project/Pillow/)
 
 Install dependencies:
 
 ```bash
-pip install pillow
+pip install pyqt5 pillow
