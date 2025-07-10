@@ -111,13 +111,18 @@ class FileImageSorter(QWidget):
         file_count = {}
         png_files = self.get_all_png_files(self.source_folder)
 
+        copied_count = 0
         for file in png_files:
-            self.copy_png_file(file, self.destination_folder, file_count)
+            try:
+                self.copy_png_file(file, self.destination_folder, file_count)
+                copied_count += 1
+            except Exception as e:
+                QMessageBox.warning(self, "Copy Error", f"Failed to copy file {file.name}:\n{e}")
 
-        if png_files:
-            self.status_label.setText(f"Found and copied {len(png_files)} PNG files")
+        if copied_count:
+            self.status_label.setText(f"Found and copied {copied_count} PNG files")
         else:
-            self.status_label.setText("PNG files not found")
+            self.status_label.setText("PNG files not found or failed to copy")
 
     def sort_by_size(self):
         """Sorts PNG files into subfolders based on image dimensions"""
