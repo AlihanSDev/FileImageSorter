@@ -6,12 +6,17 @@ from PIL import Image
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QFileDialog, QVBoxLayout, QMessageBox
 )
+from PyQt5.QtGui import QPainter, QLinearGradient, QColor, QBrush
+from PyQt5.QtCore import Qt
 import sys
+
 
 class FileImageSorter(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("FileImageSorter")
+        self.setFixedWidth(400)
+
         self.source_folder = None
         self.destination_folder = None
 
@@ -44,6 +49,14 @@ class FileImageSorter(QWidget):
 
         self.setLayout(self.layout)
 
+    def paintEvent(self, event):
+        """Draws a vertical gradient background"""
+        painter = QPainter(self)
+        gradient = QLinearGradient(0, 0, 0, self.height())
+        gradient.setColorAt(0, QColor("#e0f7fa"))
+        gradient.setColorAt(1, QColor("#ffffff"))
+        painter.fillRect(self.rect(), QBrush(gradient))
+
     def select_source_folder(self):
         """Opens a folder dialog to select the source directory"""
         folder = QFileDialog.getExistingDirectory(self, "Select a folder to search for PNGs")
@@ -62,11 +75,19 @@ class FileImageSorter(QWidget):
         """Returns a list of all PNG files in the given folder and its subfolders"""
         return [p for p in folder.rglob("*.png") if p.is_file()]
 
+    def ensure_folders_selected(self):
+        """Returns True if both folders are selected, otherwise shows an error"""
+        if not self.source_folder or not self.destination_folder:
+            QMessageBox.critical(self, "Error", "Please select both folders")
+            return False
+        return True
+
     def copy_png_file(self, src: Path, dst_dir: Path, file_count: dict):
         """Copies a PNG file to the destination folder, renames if file exists"""
         base_name = src.stem
         ext = src.suffix
-        if file_count.get(base_name, 0):
+
+        if base_name in file_count:
             file_count[base_name] += 1
             new_name = f"{base_name}_{file_count[base_name]}{ext}"
         else:
@@ -74,12 +95,16 @@ class FileImageSorter(QWidget):
             new_name = src.name
 
         dst_path = dst_dir / new_name
+        while dst_path.exists():
+            file_count[base_name] += 1
+            new_name = f"{base_name}_{file_count[base_name]}{ext}"
+            dst_path = dst_dir / new_name
+
         shutil.copy2(src, dst_path)
 
     def find_and_copy_png(self):
         """Finds PNG files and copies them to destination folder without overwriting"""
-        if not self.source_folder or not self.destination_folder:
-            QMessageBox.critical(self, "Error", "Please select both folders")
+        if not self.ensure_folders_selected():
             return
 
         self.destination_folder.mkdir(parents=True, exist_ok=True)
@@ -96,12 +121,11 @@ class FileImageSorter(QWidget):
 
     def sort_by_size(self):
         """Sorts PNG files into subfolders based on image dimensions"""
-        if not self.source_folder or not self.destination_folder:
-            QMessageBox.critical(self, "Error", "Please select both folders")
+        if not self.ensure_folders_selected():
             return
 
         self.destination_folder.mkdir(parents=True, exist_ok=True)
-        png_files = self.get_all_png_files(self.source_folder)
+        png_files = self.get_all_png_files(self.destination_folder)
         sorted_count = 0
 
         for file in png_files:
@@ -110,7 +134,14 @@ class FileImageSorter(QWidget):
                     size_folder = f"{img.width}x{img.height}"
                     target_dir = self.destination_folder / size_folder
                     target_dir.mkdir(exist_ok=True)
-                    shutil.copy2(file, target_dir / file.name)
+
+                    dst_path = target_dir / file.name
+                    count = 1
+                    while dst_path.exists():
+                        dst_path = target_dir / f"{file.stem}_{count}{file.suffix}"
+                        count += 1
+
+                    shutil.copy2(file, dst_path)
                     sorted_count += 1
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to process file {file.name}:\n{e}")
@@ -119,6 +150,7 @@ class FileImageSorter(QWidget):
             self.status_label.setText(f"Found and sorted {sorted_count} PNG files")
         else:
             self.status_label.setText("PNG files not found")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
